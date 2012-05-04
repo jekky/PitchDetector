@@ -155,16 +155,21 @@ OSStatus RenderFFTCallback (void					*inRefCon,
 		int bin = -1;
 		for (int i=0; i<n; i+=2) {
 			float curFreq = MagnitudeSquared(outputBuffer[i], outputBuffer[i+1]);
+            float freq = (i+1)/2*(THIS->sampleRate/bufferCapacity);
+            if (freq>18900.00 && curFreq>1.0)
+                printf("***** DEBUG freq: %f and energy: %f\n", freq, curFreq);
 			if (curFreq > dominantFrequency) {
 				dominantFrequency = curFreq;
 				bin = (i+1)/2;
 			}
 		}
 		memset(outputBuffer, 0, n*sizeof(SInt16));
+        
+        //printf("***** DEBUG sampleRate=%f, bufferCapacity=%d, idealFrequency=%f \n", THIS->sampleRate, bufferCapacity, THIS->sampleRate/bufferCapacity);
 		
 		// Update the UI with our newly acquired frequency value.
 		[THIS->listener frequencyChangedWithValue:bin*(THIS->sampleRate/bufferCapacity)];
-		printf("Dominant frequency: %f   bin: %d \n", bin*(THIS->sampleRate/bufferCapacity), bin);
+		//printf("Dominant frequency: %f   bin: %d \n", bin*(THIS->sampleRate/bufferCapacity), bin);
 	}
 	
 	
@@ -223,6 +228,7 @@ void ConvertInt16ToFloat(RIOInterface* THIS, void *buf, float *outputBuf, size_t
 	NSError	*err = nil;
 	AVAudioSession *session = [AVAudioSession sharedInstance];
 	
+    sampleRate = 44100.00;
 	[session setPreferredHardwareSampleRate:sampleRate error:&err];
 	[session setCategory:AVAudioSessionCategoryPlayAndRecord error:&err];
 	[session setActive:YES error:&err];
@@ -230,6 +236,7 @@ void ConvertInt16ToFloat(RIOInterface* THIS, void *buf, float *outputBuf, size_t
 	// After activation, update our sample rate. We need to update because there
 	// is a possibility the system cannot grant our request. 
 	sampleRate = [session currentHardwareSampleRate];
+    printf("***** DEBUG: Hardware sampleRate=%f ... \n", sampleRate);
 
 	[self realFFTSetup];
 }
@@ -318,8 +325,8 @@ void ConvertInt16ToFloat(RIOInterface* THIS, void *buf, float *outputBuf, size_t
 	bufferList->mNumberBuffers = 1;
 	bufferList->mBuffers[0].mNumberChannels = 1;
 	
-	bufferList->mBuffers[0].mDataByteSize = 512*bytesPerSample;
-	bufferList->mBuffers[0].mData = calloc(512, bytesPerSample);
+	bufferList->mBuffers[0].mDataByteSize = 2048*bytesPerSample;
+	bufferList->mBuffers[0].mData = calloc(2048, bytesPerSample);
 }
 
 
